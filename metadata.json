@@ -1,0 +1,6 @@
+{
+  "name": "CHARANJEET QUANTX",
+  "description": "Global Financial Intelligence — Institutional MT5-connected trading workstation, deterministic automated strategy engine, and interactive 3D Global Liquidity Globe.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,298 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pillar 0: Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global Primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isVerifiedOwner(userId) {
+      return isVerifiedUser() && request.auth.uid == userId;
+    }
+
+    function isBoundedString(val, minLen, maxLen) {
+      return val is string && val.size() >= minLen && val.size() <= maxLen;
+    }
+
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'email', 'displayName', 'role', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'email', 'displayName', 'role', 'createdAt', 'updatedAt'])
+        && data.uid == userId
+        && data.uid == request.auth.uid
+        && isBoundedString(data.email, 3, 254)
+        && isBoundedString(data.displayName, 1, 120)
+        && data.role == 'trader'
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidBridgeConfig(data, userId) {
+      return data.keys().hasAll([
+          'ownerId', 'label', 'bridgeUrl', 'brokerName', 'mt5Server',
+          'mt5Login', 'accountType', 'isDefault', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId', 'label', 'bridgeUrl', 'brokerName', 'mt5Server',
+          'mt5Login', 'accountType', 'isDefault', 'createdAt', 'updatedAt'
+        ])
+        && data.ownerId == userId
+        && data.ownerId == request.auth.uid
+        && isBoundedString(data.label, 1, 80)
+        && isBoundedString(data.bridgeUrl, 8, 300)
+        && isBoundedString(data.brokerName, 1, 80)
+        && isBoundedString(data.mt5Server, 1, 120)
+        && isBoundedString(data.mt5Login, 1, 32)
+        && data.accountType in ['Live Account', 'Practice Account', 'Unverified']
+        && data.isDefault is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAutomatedStrategy(data, userId) {
+      return data.keys().hasAll([
+          'ownerId', 'name', 'template', 'symbols', 'timeframe', 'lotSize',
+          'riskPerTradePct', 'stopLossPips', 'takeProfitPips', 'trailingStopPips',
+          'maxSimultaneousPositions', 'maxSpreadPoints', 'sessionFilter',
+          'dailyLossLimitUsd', 'maxDrawdownPct', 'maxTotalExposureLots',
+          'isLiveEnabled', 'status', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId', 'name', 'template', 'symbols', 'timeframe', 'lotSize',
+          'riskPerTradePct', 'stopLossPips', 'takeProfitPips', 'trailingStopPips',
+          'maxSimultaneousPositions', 'maxSpreadPoints', 'sessionFilter',
+          'dailyLossLimitUsd', 'maxDrawdownPct', 'maxTotalExposureLots',
+          'isLiveEnabled', 'status', 'createdAt', 'updatedAt'
+        ])
+        && data.ownerId == userId
+        && data.ownerId == request.auth.uid
+        && isBoundedString(data.name, 1, 100)
+        && data.template in ['EMA_CROSS', 'RSI_REVERSION', 'MACD_MOMENTUM', 'BB_BREAKOUT', 'ATR_TREND']
+        && data.symbols is list
+        && data.symbols.size() >= 1
+        && data.symbols.size() <= 10
+        && data.symbols[0] is string
+        && data.symbols[0].size() >= 1
+        && data.symbols[0].size() <= 40
+        && data.timeframe in ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1']
+        && data.lotSize is number && data.lotSize >= 0.01 && data.lotSize <= 100
+        && data.riskPerTradePct is number && data.riskPerTradePct >= 0.05 && data.riskPerTradePct <= 10
+        && data.stopLossPips is number && data.stopLossPips >= 0 && data.stopLossPips <= 10000
+        && data.takeProfitPips is number && data.takeProfitPips >= 0 && data.takeProfitPips <= 20000
+        && data.trailingStopPips is number && data.trailingStopPips >= 0 && data.trailingStopPips <= 5000
+        && data.maxSimultaneousPositions is int && data.maxSimultaneousPositions >= 1 && data.maxSimultaneousPositions <= 50
+        && data.maxSpreadPoints is number && data.maxSpreadPoints >= 0 && data.maxSpreadPoints <= 5000
+        && data.sessionFilter in ['ALL', 'LONDON', 'NEW_YORK', 'TOKYO', 'LONDON_NY_OVERLAP']
+        && data.dailyLossLimitUsd is number && data.dailyLossLimitUsd >= 1 && data.dailyLossLimitUsd <= 10000000
+        && data.maxDrawdownPct is number && data.maxDrawdownPct >= 0.5 && data.maxDrawdownPct <= 100
+        && data.maxTotalExposureLots is number && data.maxTotalExposureLots >= 0.01 && data.maxTotalExposureLots <= 500
+        && data.isLiveEnabled is bool
+        && data.status in ['PAUSED', 'ACTIVE', 'HALTED']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidTradingAlert(data, userId) {
+      return data.keys().hasAll([
+          'ownerId', 'symbol', 'alertType', 'condition', 'threshold',
+          'browserNotify', 'status', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId', 'symbol', 'alertType', 'condition', 'threshold',
+          'browserNotify', 'status', 'createdAt', 'updatedAt'
+        ])
+        && data.ownerId == userId
+        && data.ownerId == request.auth.uid
+        && isBoundedString(data.symbol, 1, 40)
+        && data.alertType in ['PRICE', 'SPREAD', 'INDICATOR', 'RISK_MARGIN', 'CONNECTION']
+        && data.condition in ['ABOVE', 'BELOW', 'CROSS', 'DROP']
+        && data.threshold is number
+        && data.browserNotify is bool
+        && data.status in ['ARMED', 'TRIGGERED', 'DISMISSED']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAuditLog(data, userId) {
+      return data.keys().hasAll(['ownerId', 'category', 'action', 'symbol', 'details', 'severity', 'createdAt'])
+        && data.keys().hasOnly(['ownerId', 'category', 'action', 'symbol', 'details', 'severity', 'createdAt'])
+        && data.ownerId == userId
+        && data.ownerId == request.auth.uid
+        && data.category in ['CONNECTION', 'EXECUTION', 'AUTOMATION', 'RISK', 'SYSTEM']
+        && isBoundedString(data.action, 1, 120)
+        && isBoundedString(data.symbol, 1, 40)
+        && isBoundedString(data.details, 1, 1000)
+        && data.severity in ['INFO', 'WARNING', 'CRITICAL']
+        && data.createdAt is timestamp;
+    }
+
+    function isValidWorkspacePreferences(data, userId) {
+      return data.keys().hasAll([
+          'ownerId', 'favorites', 'activeSymbol', 'timeframe',
+          'chartStyle', 'indicators', 'drawingsJson', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId', 'favorites', 'activeSymbol', 'timeframe',
+          'chartStyle', 'indicators', 'drawingsJson', 'updatedAt'
+        ])
+        && data.ownerId == userId
+        && data.ownerId == request.auth.uid
+        && data.favorites is list && data.favorites.size() <= 50
+        && (data.favorites.size() == 0 || (data.favorites[0] is string && data.favorites[0].size() <= 40))
+        && isBoundedString(data.activeSymbol, 1, 40)
+        && data.timeframe in ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1', 'MN1']
+        && data.chartStyle in ['CANDLES', 'BARS', 'LINE']
+        && data.indicators is list && data.indicators.size() <= 10
+        && (data.indicators.size() == 0 || (data.indicators[0] is string && data.indicators[0].size() <= 32))
+        && data.drawingsJson is string && data.drawingsJson.size() <= 20000
+        && data.updatedAt is timestamp;
+    }
+
+    // Connection test probe path
+    match /test/connection {
+      allow get: if isSignedIn();
+    }
+
+    // Owner-isolated trader profile
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isVerifiedOwner(userId);
+      allow create: if isValidId(userId)
+        && isVerifiedOwner(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId)
+        && isVerifiedOwner(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().role == existing().role
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['email', 'displayName', 'updatedAt']);
+
+      // Saved non-secret Exness MT5 Bridge profiles
+      match /bridgeConfigs/{configId} {
+        allow get: if isValidId(userId) && isValidId(configId) && isVerifiedOwner(userId);
+        allow list: if isVerifiedOwner(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isValidId(userId) && isValidId(configId)
+          && isVerifiedOwner(userId)
+          && exists(/databases/$(database)/documents/users/$(userId))
+          && isValidBridgeConfig(incoming(), userId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isValidId(userId) && isValidId(configId)
+          && isVerifiedOwner(userId)
+          && isValidBridgeConfig(incoming(), userId)
+          && incoming().ownerId == existing().ownerId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'label', 'bridgeUrl', 'brokerName', 'mt5Server', 'mt5Login', 'accountType', 'isDefault', 'updatedAt'
+          ]);
+        allow delete: if isValidId(userId) && isValidId(configId) && isVerifiedOwner(userId);
+      }
+
+      // Automated trading strategies
+      match /strategies/{strategyId} {
+        allow get: if isValidId(userId) && isValidId(strategyId) && isVerifiedOwner(userId);
+        allow list: if isVerifiedOwner(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isValidId(userId) && isValidId(strategyId)
+          && isVerifiedOwner(userId)
+          && exists(/databases/$(database)/documents/users/$(userId))
+          && isValidAutomatedStrategy(incoming(), userId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isValidId(userId) && isValidId(strategyId)
+          && isVerifiedOwner(userId)
+          && isValidAutomatedStrategy(incoming(), userId)
+          && incoming().ownerId == existing().ownerId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (
+            incoming().diff(existing()).affectedKeys().hasOnly(['isLiveEnabled', 'status', 'updatedAt'])
+            || incoming().diff(existing()).affectedKeys().hasOnly([
+              'name', 'template', 'symbols', 'timeframe', 'lotSize', 'riskPerTradePct',
+              'stopLossPips', 'takeProfitPips', 'trailingStopPips', 'maxSimultaneousPositions',
+              'maxSpreadPoints', 'sessionFilter', 'dailyLossLimitUsd', 'maxDrawdownPct',
+              'maxTotalExposureLots', 'isLiveEnabled', 'status', 'updatedAt'
+            ])
+          );
+        allow delete: if isValidId(userId) && isValidId(strategyId) && isVerifiedOwner(userId);
+      }
+
+      // Alerts
+      match /alerts/{alertId} {
+        allow get: if isValidId(userId) && isValidId(alertId) && isVerifiedOwner(userId);
+        allow list: if isVerifiedOwner(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isValidId(userId) && isValidId(alertId)
+          && isVerifiedOwner(userId)
+          && exists(/databases/$(database)/documents/users/$(userId))
+          && isValidTradingAlert(incoming(), userId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isValidId(userId) && isValidId(alertId)
+          && isVerifiedOwner(userId)
+          && isValidTradingAlert(incoming(), userId)
+          && incoming().ownerId == existing().ownerId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'symbol', 'alertType', 'condition', 'threshold', 'browserNotify', 'status', 'updatedAt'
+          ]);
+        allow delete: if isValidId(userId) && isValidId(alertId) && isVerifiedOwner(userId);
+      }
+
+      // Immutable Audit Logs
+      match /auditLogs/{logId} {
+        allow get: if isValidId(userId) && isValidId(logId) && isVerifiedOwner(userId);
+        allow list: if isVerifiedOwner(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isValidId(userId) && isValidId(logId)
+          && isVerifiedOwner(userId)
+          && exists(/databases/$(database)/documents/users/$(userId))
+          && isValidAuditLog(incoming(), userId)
+          && incoming().createdAt == request.time;
+      }
+
+      // Workspace preferences
+      match /workspaces/{workspaceId} {
+        allow get: if isValidId(userId) && isValidId(workspaceId) && isVerifiedOwner(userId);
+        allow list: if isVerifiedOwner(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isValidId(userId) && isValidId(workspaceId)
+          && isVerifiedOwner(userId)
+          && exists(/databases/$(database)/documents/users/$(userId))
+          && isValidWorkspacePreferences(incoming(), userId)
+          && incoming().updatedAt == request.time;
+        allow update: if isValidId(userId) && isValidId(workspaceId)
+          && isVerifiedOwner(userId)
+          && isValidWorkspacePreferences(incoming(), userId)
+          && incoming().ownerId == existing().ownerId
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'favorites', 'activeSymbol', 'timeframe', 'chartStyle', 'indicators', 'drawingsJson', 'updatedAt'
+          ]);
+        allow delete: if isValidId(userId) && isValidId(workspaceId) && isVerifiedOwner(userId);
+      }
+    }
+  }
+}

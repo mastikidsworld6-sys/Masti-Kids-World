@@ -1,0 +1,351 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated trader profile and role metadata.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 3,
+          "maxLength": 254
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "role": {
+          "type": "string",
+          "enum": ["trader"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "displayName", "role", "createdAt", "updatedAt"]
+    },
+    "BridgeConfig": {
+      "title": "BridgeConfig",
+      "description": "Saved non-secret Exness MT5 Bridge endpoint metadata per user.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "bridgeUrl": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 300
+        },
+        "brokerName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "mt5Server": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "mt5Login": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "accountType": {
+          "type": "string",
+          "enum": ["Live Account", "Practice Account", "Unverified"]
+        },
+        "isDefault": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["ownerId", "label", "bridgeUrl", "brokerName", "mt5Server", "mt5Login", "accountType", "isDefault", "createdAt", "updatedAt"]
+    },
+    "AutomatedStrategy": {
+      "title": "AutomatedStrategy",
+      "description": "Deterministic automated trading strategy configuration and risk controls.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "template": {
+          "type": "string",
+          "enum": ["EMA_CROSS", "RSI_REVERSION", "MACD_MOMENTUM", "BB_BREAKOUT", "ATR_TREND"]
+        },
+        "symbols": {
+          "type": "array",
+          "description": "Bounded list of up to 10 instrument symbols."
+        },
+        "timeframe": {
+          "type": "string",
+          "enum": ["M1", "M5", "M15", "M30", "H1", "H4", "D1"]
+        },
+        "lotSize": {
+          "type": "number"
+        },
+        "riskPerTradePct": {
+          "type": "number"
+        },
+        "stopLossPips": {
+          "type": "number"
+        },
+        "takeProfitPips": {
+          "type": "number"
+        },
+        "trailingStopPips": {
+          "type": "number"
+        },
+        "maxSimultaneousPositions": {
+          "type": "integer"
+        },
+        "maxSpreadPoints": {
+          "type": "number"
+        },
+        "sessionFilter": {
+          "type": "string",
+          "enum": ["ALL", "LONDON", "NEW_YORK", "TOKYO", "LONDON_NY_OVERLAP"]
+        },
+        "dailyLossLimitUsd": {
+          "type": "number"
+        },
+        "maxDrawdownPct": {
+          "type": "number"
+        },
+        "maxTotalExposureLots": {
+          "type": "number"
+        },
+        "isLiveEnabled": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["PAUSED", "ACTIVE", "HALTED"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "name",
+        "template",
+        "symbols",
+        "timeframe",
+        "lotSize",
+        "riskPerTradePct",
+        "stopLossPips",
+        "takeProfitPips",
+        "trailingStopPips",
+        "maxSimultaneousPositions",
+        "maxSpreadPoints",
+        "sessionFilter",
+        "dailyLossLimitUsd",
+        "maxDrawdownPct",
+        "maxTotalExposureLots",
+        "isLiveEnabled",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "TradingAlert": {
+      "title": "TradingAlert",
+      "description": "Price, spread, indicator, risk, or connection alert configured by the trader.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "symbol": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "alertType": {
+          "type": "string",
+          "enum": ["PRICE", "SPREAD", "INDICATOR", "RISK_MARGIN", "CONNECTION"]
+        },
+        "condition": {
+          "type": "string",
+          "enum": ["ABOVE", "BELOW", "CROSS", "DROP"]
+        },
+        "threshold": {
+          "type": "number"
+        },
+        "browserNotify": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["ARMED", "TRIGGERED", "DISMISSED"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["ownerId", "symbol", "alertType", "condition", "threshold", "browserNotify", "status", "createdAt", "updatedAt"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Immutable per-user audit record for connection, execution, risk, and emergency stop actions.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["CONNECTION", "EXECUTION", "AUTOMATION", "RISK", "SYSTEM"]
+        },
+        "action": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "symbol": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "details": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["INFO", "WARNING", "CRITICAL"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["ownerId", "category", "action", "symbol", "details", "severity", "createdAt"]
+    },
+    "WorkspacePreferences": {
+      "title": "WorkspacePreferences",
+      "description": "Trader workspace layout, favorites, active indicators, and chart annotations.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "favorites": {
+          "type": "array",
+          "description": "Bounded list of up to 50 favorite instrument symbols."
+        },
+        "activeSymbol": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "timeframe": {
+          "type": "string",
+          "enum": ["M1", "M5", "M15", "M30", "H1", "H4", "D1", "W1", "MN1"]
+        },
+        "chartStyle": {
+          "type": "string",
+          "enum": ["CANDLES", "BARS", "LINE"]
+        },
+        "indicators": {
+          "type": "array",
+          "description": "Bounded list of up to 10 enabled technical indicator IDs."
+        },
+        "drawingsJson": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["ownerId", "favorites", "activeSymbol", "timeframe", "chartStyle", "indicators", "drawingsJson", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Owner-isolated trader profile document."
+    },
+    "/users/{userId}/bridgeConfigs/{configId}": {
+      "schema": { "$ref": "#/entities/BridgeConfig" },
+      "description": "Saved non-secret Exness MT5 bridge connection profiles."
+    },
+    "/users/{userId}/strategies/{strategyId}": {
+      "schema": { "$ref": "#/entities/AutomatedStrategy" },
+      "description": "Deterministic automated trading strategies and risk limits."
+    },
+    "/users/{userId}/alerts/{alertId}": {
+      "schema": { "$ref": "#/entities/TradingAlert" },
+      "description": "Configured price, spread, indicator, and risk alerts."
+    },
+    "/users/{userId}/auditLogs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "Immutable trading and security audit logs."
+    },
+    "/users/{userId}/workspaces/{workspaceId}": {
+      "schema": { "$ref": "#/entities/WorkspacePreferences" },
+      "description": "Saved terminal workspace preferences, favorites, and chart annotations."
+    }
+  }
+}
